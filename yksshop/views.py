@@ -61,22 +61,36 @@ def register_view(request):
             'first_name': first_name,
             'otp': otp,
         })
+        text_content = f"Hello {first_name},\n\nYour OTP for YKS Shop account verification is: {otp}\n\nThis OTP is valid for 5 minutes.\n\nThank you!"
 
+        from django.conf import settings
         msg = EmailMultiAlternatives(
             subject='Verify your YKS Shop account with OTP',
-            body='',
-            from_email='no-reply@yks.com',
+            body=text_content,
+            from_email=settings.DEFAULT_FROM_EMAIL,  # Use valid email from settings
             to=[email]
         )
         msg.attach_alternative(html_content, 'text/html')
-        # Use fail_silently=True to prevent worker timeouts if SMTP fails
+        
+        # Try to send email and log the result
+        email_sent = False
         try:
-            msg.send(fail_silently=True)
+            result = msg.send(fail_silently=True)
+            email_sent = (result == 1)  # 1 means email was sent successfully
+            if email_sent:
+                print(f"OTP email sent successfully to {email}")
+            else:
+                print(f"Failed to send OTP email to {email} - check SMTP configuration")
         except Exception as e:
             # Log error but don't crash - registration should still succeed
             print(f"Error sending registration email to {email}: {e}")
+            import traceback
+            print(traceback.format_exc())
+        
+        # Store email_sent status in context for debugging
+        context = {'email': email, 'otp': otp, 'email_sent': email_sent}
 
-        return render(request, 'shop/enter_otp.html', {'email': email})
+        return render(request, 'shop/enter_otp.html', context)
 
     return render(request, 'shop/register.html')
 
@@ -111,19 +125,30 @@ def verify_otp_view(request):
                     'user': pending_user,
                 })
 
+                from django.conf import settings
+                text_content = f"Hello {pending_user.first_name},\n\nPlease activate your YKS Shop account by clicking this link:\n{activation_link}\n\nThank you!"
+                
                 msg = EmailMultiAlternatives(
                     subject='Activate your YKS Shop account',
-                    body='',
-                    from_email='no-reply@yks.com',
+                    body=text_content,
+                    from_email=settings.DEFAULT_FROM_EMAIL,  # Use valid email from settings
                     to=[email]
                 )
                 msg.attach_alternative(html_content, 'text/html')
                 # Use fail_silently=True to prevent worker timeouts if SMTP fails
+                email_sent = False
                 try:
-                    msg.send(fail_silently=True)
+                    result = msg.send(fail_silently=True)
+                    email_sent = (result == 1)
+                    if email_sent:
+                        print(f"Activation email sent successfully to {email}")
+                    else:
+                        print(f"Failed to send activation email to {email} - check SMTP configuration")
                 except Exception as e:
                     # Log error but don't crash - activation should still succeed
                     print(f"Error sending activation email to {email}: {e}")
+                    import traceback
+                    print(traceback.format_exc())
 
                 return render(request, 'shop/registration_pending.html')
 
@@ -140,34 +165,61 @@ def activate_view(request, uidb64, token):
     delete_expired_pending_users()
 
     try:
-        for pending_user in PendingUser.objects.filter(is_email_verified=True):
-            fake_user = User(username=pending_user.email, email=pending_user.email, is_active=False)
-            fake_user.pk = hash(pending_user.email) % (10 ** 8)
+        # Decode the uid to get the email hash
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            uid_int = int(uid)
+        except (TypeError, ValueError, OverflowError):
+            print(f"Invalid uidb64: {uidb64}")
+            return render(request, 'shop/activation_invalid.html')
 
-            if urlsafe_base64_encode(force_bytes(fake_user.pk)) == uidb64:
+        # Find the pending user by matching the hash
+        pending_user = None
+        for p_user in PendingUser.objects.filter(is_email_verified=True):
+            fake_user = User(username=p_user.email, email=p_user.email, is_active=False)
+            fake_user.pk = hash(p_user.email) % (10 ** 8)
+            
+            if fake_user.pk == uid_int:
+                # Verify token
                 if account_activation_token.check_token(fake_user, token):
-                    if User.objects.filter(email=pending_user.email).exists():
-                        return render(request, 'shop/activation_invalid.html')
+                    pending_user = p_user
+                    break
 
-                    real_user = User.objects.create_user(
-                        username=pending_user.email,
-                        email=pending_user.email,
-                        first_name=pending_user.first_name,
-                        last_name=pending_user.last_name,
-                        password=None  # set manually
-                    )
-                    real_user.password = pending_user.password_hash
-                    real_user.is_active = True
-                    real_user.save()
+        if not pending_user:
+            print(f"Pending user not found for uid: {uid_int}")
+            return render(request, 'shop/activation_invalid.html')
 
-                    Profile.objects.update_or_create(user=real_user, defaults={'phone': pending_user.phone})
-                    pending_user.delete()
+        # Check if user already exists
+        if User.objects.filter(email=pending_user.email).exists():
+            print(f"User already exists: {pending_user.email}")
+            pending_user.delete()  # Clean up
+            return render(request, 'shop/activation_invalid.html')
 
-                    return render(request, 'shop/activation_success.html')
+        # Create the real user
+        real_user = User.objects.create_user(
+            username=pending_user.email,
+            email=pending_user.email,
+            first_name=pending_user.first_name,
+            last_name=pending_user.last_name,
+            password=None  # set manually
+        )
+        real_user.password = pending_user.password_hash
+        real_user.is_active = True
+        real_user.save()
 
-        return render(request, 'shop/activation_invalid.html')
+        # Create or update profile
+        Profile.objects.update_or_create(user=real_user, defaults={'phone': pending_user.phone})
+        
+        # Delete pending user
+        pending_user.delete()
+
+        print(f"Account activated successfully for: {real_user.email}")
+        return render(request, 'shop/activation_success.html')
+
     except Exception as e:
-        print("Activation error:", e)
+        print(f"Activation error: {e}")
+        import traceback
+        print(traceback.format_exc())
         return render(request, 'shop/activation_invalid.html')
 
 
