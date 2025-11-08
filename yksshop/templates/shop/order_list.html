@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Orders - YKS Men's Wear</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+    }
+
+    header {
+      background-color: #fff;
+      padding: 15px 40px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    .order-card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .order-number {
+      font-size: 20px;
+      font-weight: bold;
+      color: #007bff;
+    }
+
+    .order-status {
+      padding: 8px 15px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .status-pending { background: #ffc107; color: #000; }
+    .status-processing { background: #17a2b8; color: white; }
+    .status-shipped { background: #007bff; color: white; }
+    .status-delivered { background: #28a745; color: white; }
+    .status-cancelled { background: #dc3545; color: white; }
+
+    .order-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .detail-item {
+      font-size: 14px;
+    }
+
+    .detail-label {
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .detail-value {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .order-total {
+      text-align: right;
+      font-size: 24px;
+      font-weight: bold;
+      color: #28a745;
+    }
+
+    .view-btn {
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      text-decoration: none;
+      display: inline-block;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1><i class="fas fa-tshirt"></i> YKS Men's Wear</h1>
+    <nav>
+      <a href="{% url 'homepage' %}">Home</a>
+      <a href="{% url 'product_list' %}">Shop</a>
+      <a href="{% url 'view_cart' %}">Cart</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h2 style="margin-bottom: 30px;">My Orders</h2>
+    
+    {% if orders %}
+      {% for order in orders %}
+        <div class="order-card">
+          <div class="order-header">
+            <div class="order-number">Order #{{ order.order_number }}</div>
+            <span class="order-status status-{{ order.status }}">{{ order.get_status_display }}</span>
+          </div>
+          
+          <div class="order-details">
+            <div class="detail-item">
+              <div class="detail-label">Date</div>
+              <div class="detail-value">{{ order.created_at|date:"M d, Y" }}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Payment Method</div>
+              <div class="detail-value">{{ order.get_payment_method_display }}</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Items</div>
+              <div class="detail-value">{{ order.items.count }} item(s)</div>
+            </div>
+          </div>
+
+          <div class="order-total">Total: Rs.{{ order.total_amount }}</div>
+          
+          <a href="{% url 'order_detail' order.id %}" class="view-btn">View Details</a>
+        </div>
+      {% endfor %}
+    {% else %}
+      <div style="text-align: center; padding: 60px; background: white; border-radius: 12px;">
+        <i class="fas fa-box-open" style="font-size: 64px; color: #ccc; margin-bottom: 20px;"></i>
+        <h3>No orders yet</h3>
+        <p style="color: #666; margin-top: 10px;">Start shopping to see your orders here!</p>
+        <a href="{% url 'homepage' %}" style="display: inline-block; margin-top: 20px; padding: 12px 30px; background: #007bff; color: white; text-decoration: none; border-radius: 8px;">
+          Start Shopping
+        </a>
+      </div>
+    {% endif %}
+  </div>
+</body>
+</html>
+

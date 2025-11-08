@@ -89,7 +89,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'yksproject.wsgi.application'
+#WSGI_APPLICATION = 'yksproject.wsgi.application'
 
 
 # Database
@@ -139,6 +139,10 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -152,7 +156,7 @@ AUTHENTICATION_BACKENDS = [
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # or 'optional'
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
-LOGIN_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = '/home'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -162,3 +166,10 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'uthish1060@gmail.com'      # your real Gmail address
 EMAIL_HOST_PASSWORD = 'ffro zufy aapi fayd'    # your Gmail app password (see below)
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# WhatsApp Notification Settings (Twilio)
+# Get your credentials from: https://www.twilio.com/try-twilio
+WHATSAPP_ENABLED = False  # Set to True after configuring Twilio
+TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
+TWILIO_WHATSAPP_FROM = os.environ.get('TWILIO_WHATSAPP_FROM', '')  # Format: +14155238886
