@@ -153,9 +153,12 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # Optional: configure allauth settings like email verification
-ACCOUNT_EMAIL_REQUIRED = True
+# Updated for django-allauth compatibility (Django 5.x)
 ACCOUNT_EMAIL_VERIFICATION = 'mandatory'  # or 'optional'
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_LOGIN_METHODS = {'email'}  # Use email for login (replaces deprecated ACCOUNT_AUTHENTICATION_METHOD)
+ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']  # Modern way - replaces deprecated ACCOUNT_EMAIL_REQUIRED
+# Note: ACCOUNT_EMAIL_REQUIRED is deprecated but kept for backward compatibility with email verification
+# The email requirement is now handled by ACCOUNT_SIGNUP_FIELDS with 'email*'
 LOGIN_REDIRECT_URL = '/home'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
