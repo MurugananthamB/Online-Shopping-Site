@@ -187,35 +187,6 @@
       cursor: not-allowed;
     }
 
-    .notification {
-      position: fixed;
-      top: 80px;
-      right: 20px;
-      padding: 15px 20px;
-      background: #28a745;
-      color: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-      z-index: 2000;
-      display: none;
-      animation: slideIn 0.3s ease;
-    }
-
-    .notification.error {
-      background: #dc3545;
-    }
-
-    @keyframes slideIn {
-      from {
-        transform: translateX(100%);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-
     footer {
       background-color: #222;
       color: white;
@@ -294,13 +265,9 @@
               </p>
               <button class="add-to-cart-btn" 
                       data-product-id="{{ product.id }}"
-                      {% if product.stock == 0 or not user.is_authenticated %}disabled{% endif %}>
+                      {% if product.stock == 0 %}disabled{% endif %}>
                 <i class="fas fa-cart-plus"></i>
-                {% if user.is_authenticated %}
-                  Add to Cart
-                {% else %}
-                  Login to Add
-                {% endif %}
+                Add to Cart
               </button>
             </div>
           </div>
@@ -319,25 +286,14 @@
     <p>&copy; 2025 YKS Men's Wear Showroom. All rights reserved.</p>
   </footer>
 
-  <div class="notification" id="notification"></div>
-
   <script>
-    // Add to cart functionality
+    // ✅ Add to cart and redirect to cart page
     document.querySelectorAll('.add-to-cart-btn').forEach(button => {
       button.addEventListener('click', function() {
         const productId = this.getAttribute('data-product-id');
         const btn = this;
-        
-        if (btn.disabled) {
-          if (!{{ user.is_authenticated|yesno:"true,false" }}) {
-            showNotification('Please login to add items to cart', 'error');
-            setTimeout(() => {
-              window.location.href = '{% url "login" %}';
-            }, 1500);
-          }
-          return;
-        }
 
+        {% if user.is_authenticated %}
         btn.disabled = true;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding...';
 
@@ -353,41 +309,25 @@
         .then(response => response.json())
         .then(data => {
           if (data.success) {
-            showNotification(data.message);
-            // Update cart badge
-            const cartBadge = document.querySelector('.cart-badge');
-            if (cartBadge) {
-              cartBadge.textContent = data.cart_count;
-            } else {
-              const cartIcon = document.querySelector('.cart-icon');
-              if (cartIcon && data.cart_count > 0) {
-                cartIcon.innerHTML = '<i class="fas fa-shopping-cart"></i><span class="cart-badge">' + data.cart_count + '</span>';
-              }
-            }
+            // ✅ Redirect to cart page after adding
+            window.location.href = "{% url 'view_cart' %}";
           } else {
-            showNotification(data.message, 'error');
+            alert(data.message || "Unable to add product to cart");
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-cart-plus"></i> Add to Cart';
           }
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fas fa-cart-plus"></i> Add to Cart';
         })
-        .catch(error => {
-          showNotification('An error occurred. Please try again.', 'error');
+        .catch(() => {
+          alert("Something went wrong. Try again later.");
           btn.disabled = false;
           btn.innerHTML = '<i class="fas fa-cart-plus"></i> Add to Cart';
         });
+        {% else %}
+        // 🚫 Redirect to login if user not authenticated
+        window.location.href = "{% url 'login' %}";
+        {% endif %}
       });
     });
-
-    function showNotification(message, type = 'success') {
-      const notification = document.getElementById('notification');
-      notification.textContent = message;
-      notification.className = 'notification ' + (type === 'error' ? 'error' : '');
-      notification.style.display = 'block';
-      
-      setTimeout(() => {
-        notification.style.display = 'none';
-      }, 3000);
-    }
   </script>
 
 </body>

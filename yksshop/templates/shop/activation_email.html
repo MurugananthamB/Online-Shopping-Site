@@ -1,42 +1,8 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .button {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #007bff;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            margin: 20px 0;
-        }
-        .button:hover {
-            background-color: #0056b3;
-        }
-    </style>
-</head>
 <body>
-    <div class="container">
-        <p>Hi {{ user.first_name|default:user.email }},</p>
-        <p>Thanks for signing up for YKS Shop!</p>
-        <p>Please click the button below to activate your account:</p>
-        <p><a href="{{ activation_link }}" class="button">Activate Now</a></p>
-        <p>Or copy and paste this link into your browser:</p>
-        <p style="word-break: break-all; color: #007bff;">{{ activation_link }}</p>
-        <p>This link will expire in 24 hours.</p>
-        <p>If you didn't create this account, you can safely ignore this email.</p>
-    </div>
+    <p>Hi {{ user.username }},</p>
+    <p>Thanks for signing up. Please click the link below to activate your YKS Shop account:</p>
+    <p><a href="{{ activation_link }}">Activate now</a></p>
 </body>
 </html>

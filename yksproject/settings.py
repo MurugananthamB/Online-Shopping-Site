@@ -174,9 +174,12 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_TIMEOUT = 5  # 5 second timeout to prevent worker timeouts
 
-EMAIL_HOST_USER = 'uthish1060@gmail.com'      # your real Gmail address
-EMAIL_HOST_PASSWORD = 'ffro zufy aapi fayd'    # your Gmail app password (see below)
-DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_HOST_USER = 'yksshop2025@gmail.com'      # your real Gmail address
+EMAIL_HOST_PASSWORD = 'sbyogdqfzgvrqrml'    # your Gmail app password (see below)
+DEFAULT_FROM_EMAIL = "YKS Men's Wear <no-reply@yksshop.com>"
+
+
+
 
 # REST Framework Configuration with JWT
 REST_FRAMEWORK = {

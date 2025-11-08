@@ -1,23 +1,23 @@
 """
 Django signals for automatic notifications
+Handles automatic email & WhatsApp notifications for orders and stock updates.
 """
+
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from .models import Order, Product
-from .notifications import (
+from .notifications import ( 
     send_order_confirmation,
-    send_order_status_update,
-    send_product_back_in_stock
+    send_order_status_update
 )
 
-# Store old status before save
 _old_order_status = {}
 
 
 @receiver(pre_save, sender=Order)
 def order_pre_save_handler(sender, instance, **kwargs):
     """
-    Store old status before saving
+    Store old order status before saving, so we can detect status changes.
     """
     if instance.pk:
         try:
@@ -30,25 +30,21 @@ def order_pre_save_handler(sender, instance, **kwargs):
 @receiver(post_save, sender=Order)
 def order_post_save_handler(sender, instance, created, **kwargs):
     """
-    Send notification when order is created or status changes
-    Note: Email sending is done with fail_silently=True to prevent worker timeouts
+    Send notifications when an order is created or its status changes.
+    - On creation: send order confirmation
+    - On status update: send status update notification
     """
     try:
         if created:
-            # New order created
+            # 📨 Send order confirmation (email + WhatsApp)
             send_order_confirmation(instance)
         else:
-            # Order updated - check if status changed
-            if instance.pk and instance.pk in _old_order_status:
-                old_status = _old_order_status[instance.pk]
-                if instance.status != old_status:
-                    send_order_status_update(instance, old_status)
-                # Clean up
-                del _old_order_status[instance.pk]
+            # Detect status change
+            old_status = _old_order_status.pop(instance.pk, None)
+            if old_status and instance.status != old_status:
+                send_order_status_update(instance, old_status)
     except Exception as e:
-        # Don't let email errors crash the worker
-        # Log the error but continue processing
-        print(f"Error in order_post_save_handler: {e}")
+        print(f"[Signal Error] order_post_save_handler: {e}")
         import traceback
         print(traceback.format_exc())
 
@@ -56,17 +52,13 @@ def order_post_save_handler(sender, instance, created, **kwargs):
 @receiver(pre_save, sender=Product)
 def product_stock_handler(sender, instance, **kwargs):
     """
-    Track product stock changes to notify when back in stock
+    Detect when a product that was out of stock comes back in stock.
     """
     if instance.pk:
         try:
             old_product = Product.objects.get(pk=instance.pk)
-            # If product was out of stock (stock=0) and now has stock
             if old_product.stock == 0 and instance.stock > 0 and instance.is_available:
-                # Product is back in stock
-                # Note: In a real app, you'd want to notify users who were waiting
-                # This would require a separate model to track "notify me" requests
-                pass
+                # ✅ Product is back in stock — trigger notification
+                send_product_back_in_stock(instance)
         except Product.DoesNotExist:
             pass
-

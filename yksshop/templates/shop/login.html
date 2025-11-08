@@ -4,11 +4,18 @@
 <meta charset="UTF-8" />
 <title>Login - YKS Shop</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<!-- Font Awesome CDN -->
+
+<!-- Prevent caching and autofill -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
+
+<!-- Font Awesome -->
 <link
   rel="stylesheet"
   href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 />
+
 <style>
   body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -48,16 +55,12 @@
 
   .form-group {
     position: relative;
-    margin-bottom: 8px; /* reduced margin to fit forgot link nicely */
-  }
-
-  .form-group label {
-    display: none;
+    margin-bottom: 8px;
   }
 
   input {
     width: 100%;
-    padding: 10px 40px 10px 10px; /* padding-right for icon */
+    padding: 10px 40px 10px 10px;
     border: 1px solid #ccc;
     border-radius: 8px;
     font-size: 14px;
@@ -79,11 +82,10 @@
     transform: translateY(-50%);
     color: #888;
     font-size: 16px;
-    cursor: pointer; /* for eye icon */
+    cursor: pointer;
     pointer-events: auto;
   }
 
-  /* Forgot password link */
   .forgot-password {
     text-align: right;
     margin-bottom: 18px;
@@ -148,15 +150,15 @@
       <div class="error">{{ error_message }}</div>
     {% endif %}
 
-    <form method="POST">
-    {% csrf_token %}
+    <form method="POST" autocomplete="off" autocapitalize="none">
+      {% csrf_token %}
       <div class="form-group">
-        <input type="email" name="email" id="email" placeholder="Email" required />
+        <input type="email" name="email" id="email" placeholder="Email" required autocomplete="off" />
         <i class="fa fa-envelope fa-icon"></i>
       </div>
 
       <div class="form-group">
-        <input type="password" name="password" id="password" placeholder="Password" required />
+        <input type="password" name="password" id="password" placeholder="Password" required autocomplete="new-password" />
         <i class="fa fa-lock fa-icon"></i>
         <i class="fa fa-eye fa-icon" id="togglePassword" style="right: 40px;"></i>
       </div>
@@ -174,14 +176,17 @@
   </div>
 
   <script>
+    // Disable autofill visually after load
+    window.addEventListener('load', () => {
+      document.getElementById('password').value = '';
+    });
+
+    // Toggle password visibility
     const togglePassword = document.querySelector('#togglePassword');
     const passwordInput = document.querySelector('#password');
-
     togglePassword.addEventListener('click', function () {
       const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
       passwordInput.setAttribute('type', type);
-
-      // toggle icon
       this.classList.toggle('fa-eye-slash');
     });
   </script>

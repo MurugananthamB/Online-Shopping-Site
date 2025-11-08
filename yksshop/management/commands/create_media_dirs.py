@@ -33,5 +33,4 @@ class Command(BaseCommand):
         
         self.stdout.write(self.style.SUCCESS(f'Successfully created media directories:'))
         self.stdout.write(f'  - {media_root}')
-        self.stdout.write(f'  - {products_dir}'))
-
+        self.stdout.write(f'  - {products_dir}')

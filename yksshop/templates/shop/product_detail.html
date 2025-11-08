@@ -6,86 +6,90 @@
   <title>{{ product.name }} - YKS Men's Wear</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #f5f5f5;
+      margin: 0;
+      padding: 0;
     }
 
     header {
       background-color: #fff;
       padding: 15px 40px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
+    header h1 { color: #007bff; font-size: 24px; }
+
+    nav a {
+      color: #333;
+      text-decoration: none;
+      margin-left: 20px;
+    }
+
     .container {
-      max-width: 1200px;
+      max-width: 1000px;
       margin: 40px auto;
-      padding: 0 20px;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 40px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      padding: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
     }
 
     .product-image {
-      width: 100%;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 400px;
+      height: 400px;
+      object-fit: cover;
+      border-radius: 8px;
     }
 
-    .product-info h1 {
-      font-size: 32px;
-      margin-bottom: 20px;
+    .product-details {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .product-name {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #333;
     }
 
     .product-price {
-      font-size: 36px;
+      font-size: 24px;
       color: #28a745;
-      font-weight: bold;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
 
     .product-description {
-      color: #666;
-      line-height: 1.6;
-      margin-bottom: 30px;
-    }
-
-    .quantity-selector {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-bottom: 30px;
-    }
-
-    .quantity-input {
-      width: 80px;
-      padding: 10px;
-      text-align: center;
-      border: 1px solid #ddd;
-      border-radius: 8px;
+      font-size: 16px;
+      color: #555;
+      margin-bottom: 20px;
     }
 
     .add-to-cart-btn {
-      background: #007bff;
+      background-color: #007bff;
       color: white;
-      padding: 15px 40px;
+      padding: 12px 20px;
       border: none;
       border-radius: 8px;
-      font-size: 18px;
       cursor: pointer;
+      font-size: 16px;
     }
 
     .add-to-cart-btn:hover {
-      background: #0056b3;
+      background-color: #0056b3;
     }
   </style>
 </head>
@@ -95,55 +99,56 @@
     <nav>
       <a href="{% url 'homepage' %}">Home</a>
       <a href="{% url 'product_list' %}">Shop</a>
+      {% if user.is_authenticated %}
+        <a href="{% url 'view_cart' %}">Cart ({{ cart_count }})</a>
+      {% endif %}
     </nav>
   </header>
 
   <div class="container">
-    <div>
-      <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-image" onerror="this.src='https://via.placeholder.com/600x600?text=No+Image'">
-    </div>
-    <div class="product-info">
-      <h1>{{ product.name }}</h1>
-      <div class="product-price">Rs.{{ product.price }}</div>
-      <p class="product-description">{{ product.description }}</p>
-      
-      <div class="quantity-selector">
-        <label>Quantity:</label>
-        <input type="number" class="quantity-input" id="quantity" value="1" min="1" max="{{ product.stock }}">
-      </div>
+    <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-image"
+         onerror="this.src='https://via.placeholder.com/400x400?text=No+Image'">
 
-      <button class="add-to-cart-btn" onclick="addToCart()">
+    <div class="product-details">
+      <h2 class="product-name">{{ product.name }}</h2>
+      <p class="product-price">Rs.{{ product.price }}</p>
+      <p class="product-description">{{ product.description }}</p>
+
+      <button class="add-to-cart-btn" onclick="addToCart({{ product.id }})">
         <i class="fas fa-cart-plus"></i> Add to Cart
       </button>
     </div>
   </div>
 
+  <!-- ✅ FIXED SCRIPT -->
   <script>
-    function addToCart() {
-      {% if user.is_authenticated %}
-        const quantity = document.getElementById('quantity').value;
-        const formData = new FormData();
-        formData.append('product_id', {{ product.id }});
-        formData.append('quantity', quantity);
-        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+  function addToCart(productId) {
+    {% if user.is_authenticated %}
+      const formData = new FormData();
+      formData.append('product_id', productId);
+      formData.append('quantity', '1');
+      formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
 
-        fetch('{% url "add_to_cart" %}', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            alert(data.message);
-          } else {
-            alert(data.message);
-          }
-        });
-      {% else %}
-        window.location.href = '{% url "login" %}';
-      {% endif %}
-    }
+      fetch('{% url "add_to_cart" %}', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          window.location.href = "{% url 'view_cart' %}";
+        } else {
+          alert(data.message || "Unable to add product to cart.");
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert("Something went wrong. Please try again.");
+      });
+    {% else %}
+      window.location.href = "{% url 'login' %}";
+    {% endif %}
+  }
   </script>
 </body>
 </html>
-
