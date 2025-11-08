@@ -1,10 +1,13 @@
 from django.urls import path
 from . import views
 from . import auth_views
+from . import jwt_views
+from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    # Traditional authentication URLs
     path('',views.login_view,name="login"),
     path('register',views.register_view,name="register"),
     path('accounts/registration-pending/', views.registration_pending, name='registration_pending'),
@@ -15,6 +18,15 @@ urlpatterns = [
     path('reset/done/', auth_views.CustomPasswordResetCompleteView.as_view(), name='password_reset_complete'),
     path('verify-otp/', views.verify_otp_view, name='verify_otp'),
     path('activate/<uidb64>/<token>/', views.activate_view, name='activate'),
+    path('logout/', views.logout_view, name='logout'),
+    path('profile/', views.profile_view, name='profile'),
+    
+    # JWT Authentication URLs
+    path('api/token/', jwt_views.CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('api/login/', jwt_views.jwt_login, name='jwt_login'),
+    path('api/user/', jwt_views.jwt_user_info, name='jwt_user_info'),
     
     # E-commerce URLs
     path('products/', views.product_list, name='product_list'),

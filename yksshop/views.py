@@ -14,6 +14,7 @@ from .models import Profile, PendingUser, Category, Product, Cart, CartItem, Ord
 from .tokens import account_activation_token  # Ensure this is defined correctly
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.db.models import Q
@@ -183,6 +184,33 @@ def login_view(request):
 
 def registration_pending(request):
     return render(request, 'shop/registration_pending.html')
+
+
+@login_required
+def logout_view(request):
+    """Logout view"""
+    logout(request)
+    return redirect('login')
+
+
+@login_required
+def profile_view(request):
+    """User profile view"""
+    user = request.user
+    try:
+        profile = Profile.objects.get(user=user)
+    except Profile.DoesNotExist:
+        profile = None
+    
+    # Get user orders
+    orders = Order.objects.filter(user=user).order_by('-created_at')[:5]
+    
+    context = {
+        'user': user,
+        'profile': profile,
+        'recent_orders': orders,
+    }
+    return render(request, 'shop/profile.html', context)
 
 
 # E-commerce Views
