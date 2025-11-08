@@ -4,10 +4,12 @@ from . import auth_views
 
 urlpatterns = [
     # Authentication
-    path('', views.login_view, name="login"),
+    #path('', views.login_view, name="login"),
+    path('', views.homepage, name="homepage"),
     path('register/', views.register_view, name="register"),
     path('verify-otp/', views.verify_otp_view, name='verify_otp'),
     path('activate/<uidb64>/<token>/', views.activate_view, name='activate'),
+    path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
     path('profile/', views.profile_view, name='profile'),
     path('accounts/registration-pending/', views.registration_pending, name='registration_pending'),
