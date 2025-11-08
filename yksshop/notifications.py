@@ -20,7 +20,7 @@ def get_site_url():
     return 'http://localhost:8000'
 
 
-def send_email_notification(subject, template_name, context, recipient_email, recipient_name=None):
+def send_email_notification(subject, template_name, context, recipient_email, recipient_name=None, fail_silently=True):
     """
     Send email notification to user
     
@@ -30,13 +30,14 @@ def send_email_notification(subject, template_name, context, recipient_email, re
         context: Dictionary with template variables
         recipient_email: Recipient email address
         recipient_name: Recipient name (optional)
+        fail_silently: If True, don't raise exceptions (default: True to prevent worker timeouts)
     """
     try:
         # Render HTML email
         html_content = render_to_string(f'shop/emails/{template_name}.html', context)
         text_content = strip_tags(html_content)  # Plain text version
         
-        # Create email
+        # Create email with fail_silently to prevent worker timeouts
         msg = EmailMultiAlternatives(
             subject=subject,
             body=text_content,
@@ -44,11 +45,15 @@ def send_email_notification(subject, template_name, context, recipient_email, re
             to=[recipient_email]
         )
         msg.attach_alternative(html_content, 'text/html')
-        msg.send()
+        # Use fail_silently=True to prevent blocking the request if SMTP times out
+        msg.send(fail_silently=fail_silently)
         
         return True
     except Exception as e:
-        print(f"Error sending email: {e}")
+        # Log error but don't raise to prevent worker crashes
+        print(f"Error sending email to {recipient_email}: {e}")
+        import traceback
+        print(traceback.format_exc())
         return False
 
 

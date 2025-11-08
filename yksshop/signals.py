@@ -31,18 +31,26 @@ def order_pre_save_handler(sender, instance, **kwargs):
 def order_post_save_handler(sender, instance, created, **kwargs):
     """
     Send notification when order is created or status changes
+    Note: Email sending is done with fail_silently=True to prevent worker timeouts
     """
-    if created:
-        # New order created
-        send_order_confirmation(instance)
-    else:
-        # Order updated - check if status changed
-        if instance.pk and instance.pk in _old_order_status:
-            old_status = _old_order_status[instance.pk]
-            if instance.status != old_status:
-                send_order_status_update(instance, old_status)
-            # Clean up
-            del _old_order_status[instance.pk]
+    try:
+        if created:
+            # New order created
+            send_order_confirmation(instance)
+        else:
+            # Order updated - check if status changed
+            if instance.pk and instance.pk in _old_order_status:
+                old_status = _old_order_status[instance.pk]
+                if instance.status != old_status:
+                    send_order_status_update(instance, old_status)
+                # Clean up
+                del _old_order_status[instance.pk]
+    except Exception as e:
+        # Don't let email errors crash the worker
+        # Log the error but continue processing
+        print(f"Error in order_post_save_handler: {e}")
+        import traceback
+        print(traceback.format_exc())
 
 
 @receiver(pre_save, sender=Product)

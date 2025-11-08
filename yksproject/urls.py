@@ -16,9 +16,17 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('',include('yksshop.urls')),
     path('accounts/', include('allauth.urls'))
 ]
+
+# Serve media files in both development and production
+# Note: For production, consider using cloud storage (AWS S3, Cloudinary, etc.)
+# Always serve media files (both DEBUG and production)
+# This ensures media files work on Render.com
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
