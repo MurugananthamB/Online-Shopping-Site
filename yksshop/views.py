@@ -69,7 +69,12 @@ def register_view(request):
             to=[email]
         )
         msg.attach_alternative(html_content, 'text/html')
-        msg.send()
+        # Use fail_silently=True to prevent worker timeouts if SMTP fails
+        try:
+            msg.send(fail_silently=True)
+        except Exception as e:
+            # Log error but don't crash - registration should still succeed
+            print(f"Error sending registration email to {email}: {e}")
 
         return render(request, 'shop/enter_otp.html', {'email': email})
 
@@ -113,7 +118,12 @@ def verify_otp_view(request):
                     to=[email]
                 )
                 msg.attach_alternative(html_content, 'text/html')
-                msg.send()
+                # Use fail_silently=True to prevent worker timeouts if SMTP fails
+                try:
+                    msg.send(fail_silently=True)
+                except Exception as e:
+                    # Log error but don't crash - activation should still succeed
+                    print(f"Error sending activation email to {email}: {e}")
 
                 return render(request, 'shop/registration_pending.html')
 
