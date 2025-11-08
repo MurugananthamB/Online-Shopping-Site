@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+        }
+        .order-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #666;
+        }
+        .info-value {
+            color: #333;
+        }
+        .order-items {
+            margin: 30px 0;
+        }
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        .order-item:last-child {
+            border-bottom: none;
+        }
+        .item-name {
+            font-weight: 600;
+        }
+        .item-details {
+            color: #666;
+            font-size: 14px;
+        }
+        .total {
+            text-align: right;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #007bff;
+        }
+        .total-amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Order Confirmed!</h1>
+            <p>Thank you for your purchase, {{ user.first_name|default:user.username }}!</p>
+        </div>
+
+        <div class="order-info">
+            <div class="info-row">
+                <span class="info-label">Order Number:</span>
+                <span class="info-value"><strong>{{ order.order_number }}</strong></span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Order Date:</span>
+                <span class="info-value">{{ order.created_at|date:"F d, Y h:i A" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Payment Method:</span>
+                <span class="info-value">{{ order.get_payment_method_display }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Status:</span>
+                <span class="info-value">{{ order.get_status_display }}</span>
+            </div>
+        </div>
+
+        <h3>Order Items:</h3>
+        <div class="order-items">
+            {% for item in order_items %}
+            <div class="order-item">
+                <div>
+                    <div class="item-name">{{ item.product.name }}</div>
+                    <div class="item-details">Quantity: {{ item.quantity }} × Rs.{{ item.price }}</div>
+                </div>
+                <div style="font-weight: 600; color: #28a745;">Rs.{{ item.get_total }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="total">
+            <div class="total-amount">Total: Rs.{{ order.total_amount }}</div>
+        </div>
+
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-top: 30px;">
+            <h4>Shipping Address:</h4>
+            <p>
+                {{ order.shipping_name }}<br>
+                {{ order.shipping_address }}<br>
+                {{ order.shipping_city }}, {{ order.shipping_state }} - {{ order.shipping_pincode }}<br>
+                Phone: {{ order.shipping_phone }}
+            </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="{{ site_url }}/order/{{ order.id }}/" class="button">View Order Details</a>
+        </div>
+
+        <div class="footer">
+            <p>If you have any questions, please contact us at support@yksmenswear.com</p>
+            <p>&copy; 2025 YKS Men's Wear. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+
