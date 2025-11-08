@@ -6,9 +6,10 @@ Handles automatic email & WhatsApp notifications for orders and stock updates.
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 from .models import Order, Product
-from .notifications import ( 
+from .notifications import (  # ✅ note: use singular 'notification' (not notifications)
     send_order_confirmation,
-    send_order_status_update
+    send_order_status_update,
+    send_product_back_in_stock,
 )
 
 _old_order_status = {}
