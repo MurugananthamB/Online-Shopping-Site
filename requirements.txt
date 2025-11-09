@@ -12,3 +12,4 @@ Pillow
 twilio
 cloudinary 
 django-cloudinary-storage
+python-dotenv
