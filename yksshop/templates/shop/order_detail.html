@@ -143,9 +143,12 @@
       
       {% for item in order.items.all %}
         <div class="order-item">
-          <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="item-image" onerror="this.src='https://via.placeholder.com/100x100?text=No+Image'">
+          <img src="{{ item.product.get_image_url }}" alt="{{ item.product.name }}" class="item-image" onerror="this.src='https://via.placeholder.com/100x100?text=No+Image'">
           <div class="item-details">
             <div class="item-name">{{ item.product.name }}</div>
+            {% if item.size %}
+              <div>Size: {{ item.size }}</div>
+            {% endif %}
             <div>Quantity: {{ item.quantity }} × Rs.{{ item.price }}</div>
             <div class="item-price">Total: Rs.{{ item.get_total }}</div>
           </div>

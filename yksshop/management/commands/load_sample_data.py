@@ -3,7 +3,7 @@ Management command to load sample products and categories for YKS Men's Wear
 Usage: python manage.py load_sample_data
 """
 from django.core.management.base import BaseCommand
-from yksshop.models import Category, Product
+from yksshop.models import Category, Product, ProductVariant
 from django.utils.text import slugify
 
 
@@ -229,6 +229,8 @@ class Command(BaseCommand):
         created_count = 0
         updated_count = 0
         
+        apparel_categories = {'Casual Shirts', 'Formal Shirts', 'Pants', 'Shorts', 'T-Shirts'}
+
         for prod_data in products_data:
             category = categories[prod_data['category']]
             slug = slugify(prod_data['name'])
@@ -241,7 +243,7 @@ class Command(BaseCommand):
                     'price': prod_data['price'],
                     'stock': prod_data['stock'],
                     'description': prod_data['description'],
-                    'is_available': True
+                    'is_available': prod_data['stock'] > 0
                 }
             )
             
@@ -254,10 +256,33 @@ class Command(BaseCommand):
                 product.price = prod_data['price']
                 product.stock = prod_data['stock']
                 product.description = prod_data['description']
-                product.is_available = True
+                product.is_available = prod_data['stock'] > 0
                 product.save()
                 updated_count += 1
                 self.stdout.write(self.style.WARNING(f'  Updated: {product.name} - Rs.{product.price} (Stock: {product.stock})'))
+
+            if prod_data['category'] in apparel_categories:
+                variant_sizes = [
+                    ProductVariant.Sizes.S,
+                    ProductVariant.Sizes.M,
+                    ProductVariant.Sizes.L,
+                    ProductVariant.Sizes.XL,
+                ]
+                total_stock = prod_data['stock']
+                per_variant = total_stock // len(variant_sizes) if variant_sizes else 0
+                remainder = total_stock % len(variant_sizes) if variant_sizes else 0
+
+                for index, size in enumerate(variant_sizes):
+                    size_stock = per_variant + (1 if index < remainder else 0)
+                    ProductVariant.objects.update_or_create(
+                        product=product,
+                        size=size,
+                        defaults={'stock': size_stock}
+                    )
+
+                product.stock = product.total_stock
+                product.is_available = product.total_stock > 0
+                product.save(update_fields=['stock', 'is_available'])
         
         self.stdout.write(self.style.SUCCESS(f'\n✅ Sample data loaded successfully!'))
         self.stdout.write(self.style.SUCCESS(f'   - Categories: {len(categories)}'))

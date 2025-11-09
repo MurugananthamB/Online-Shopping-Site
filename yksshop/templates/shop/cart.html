@@ -257,20 +257,29 @@
               <tr data-item-id="{{ item.id }}">
                 <td>
                   <div class="product-info">
-                    <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="product-image" onerror="this.src='https://via.placeholder.com/80x80?text=No+Image'">
+                    <img src="{{ item.product.get_image_url }}" alt="{{ item.product.name }}" class="product-image" onerror="this.src='https://via.placeholder.com/80x80?text=No+Image'">
                     <div>
                       <div class="product-name">{{ item.product.name }}</div>
-                      <small style="color: #666;">Stock: {{ item.product.stock }}</small>
+                      {% if item.size %}
+                        <small style="color: #555;">Size: {{ item.size }}</small><br>
+                      {% endif %}
+                      <small class="stock-label" style="color: #666;">Stock: {{ item.available_stock }}</small>
                     </div>
                   </div>
                 </td>
                 <td class="price">Rs.{{ item.product.price }}</td>
                 <td>
                   <div class="quantity-controls">
-                    <button class="quantity-btn" onclick="updateQuantity({{ item.id }}, {{ item.quantity|add:'-1' }})">-</button>
-                    <input type="number" class="quantity-input" value="{{ item.quantity }}" min="1" max="{{ item.product.stock }}" 
-                           onchange="updateQuantity({{ item.id }}, this.value)" id="qty-{{ item.id }}">
-                    <button class="quantity-btn" onclick="updateQuantity({{ item.id }}, {{ item.quantity|add:'1' }})">+</button>
+                    <button class="quantity-btn" onclick="changeQuantity({{ item.id }}, -1)">-</button>
+                    <input type="number" class="quantity-input" value="{{ item.quantity }}" min="1"
+                           {% if item.available_stock > 0 %}
+                             max="{{ item.available_stock }}"
+                           {% else %}
+                             max="{{ item.quantity }}"
+                           {% endif %}
+                           data-max="{{ item.available_stock }}"
+                           onchange="handleQuantityInput({{ item.id }}, this.value)" id="qty-{{ item.id }}">
+                    <button class="quantity-btn" onclick="changeQuantity({{ item.id }}, 1)">+</button>
                   </div>
                 </td>
                 <td class="price" id="total-{{ item.id }}">Rs.{{ item.get_total }}</td>
@@ -319,11 +328,44 @@
   <div class="notification" id="notification"></div>
 
   <script>
+    function changeQuantity(itemId, delta) {
+      const input = document.getElementById(`qty-${itemId}`);
+      if (!input) {
+        return;
+      }
+
+      const current = parseInt(input.value) || 0;
+      const max = parseInt(input.getAttribute('max')) || Infinity;
+      let nextQuantity = current + delta;
+
+      if (delta > 0 && nextQuantity > max) {
+        nextQuantity = max;
+        showNotification('Cannot exceed available stock', 'error');
+      }
+
+      updateQuantity(itemId, nextQuantity);
+    }
+
+    function handleQuantityInput(itemId, value) {
+      let quantity = parseInt(value);
+      if (Number.isNaN(quantity)) {
+        quantity = 1;
+      }
+      const input = document.getElementById(`qty-${itemId}`);
+      if (input) {
+        const max = parseInt(input.getAttribute('max')) || Infinity;
+        if (quantity > max) {
+          quantity = max;
+          showNotification('Cannot exceed available stock', 'error');
+        }
+      }
+      updateQuantity(itemId, quantity);
+    }
+
     function updateQuantity(itemId, quantity) {
       quantity = parseInt(quantity);
-      if (quantity < 1) {
-        removeItem(itemId);
-        return;
+      if (Number.isNaN(quantity)) {
+        quantity = 1;
       }
 
       const formData = new FormData();
@@ -338,11 +380,44 @@
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          document.getElementById('total-' + itemId).textContent = 'Rs.' + data.item_total.toFixed(2);
+          if (data.item_removed) {
+            const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+            if (row) {
+              row.remove();
+            }
+          } else {
+            const totalCell = document.getElementById('total-' + itemId);
+            if (totalCell) {
+              totalCell.textContent = 'Rs.' + data.item_total.toFixed(2);
+            }
+            const row = document.querySelector(`tr[data-item-id="${itemId}"]`);
+            if (row && data.available_stock !== undefined) {
+              const stockLabel = row.querySelector('.stock-label');
+              if (stockLabel) {
+                stockLabel.textContent = 'Stock: ' + data.available_stock;
+              }
+            }
+            const input = document.getElementById('qty-' + itemId);
+            if (input) {
+              const safeQuantity = Math.max(quantity, 1);
+              input.value = safeQuantity;
+              if (data.available_stock !== undefined) {
+                const maxStock = Math.max(parseInt(data.available_stock, 10) || 0, safeQuantity);
+                input.setAttribute('max', maxStock);
+                input.dataset.max = data.available_stock;
+              }
+            }
+          }
+
           document.getElementById('subtotal').textContent = 'Rs.' + data.cart_total.toFixed(2);
           document.getElementById('cart-total').textContent = 'Rs.' + data.cart_total.toFixed(2);
-          document.getElementById('qty-' + itemId).value = quantity;
           showNotification('Cart updated');
+
+          if (data.cart_count === 0) {
+            setTimeout(() => {
+              location.reload();
+            }, 500);
+          }
         } else {
           showNotification(data.message, 'error');
         }
@@ -353,10 +428,6 @@
     }
 
     function removeItem(itemId) {
-      if (!confirm('Are you sure you want to remove this item?')) {
-        return;
-      }
-
       const formData = new FormData();
       formData.append('cart_item_id', itemId);
       formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');

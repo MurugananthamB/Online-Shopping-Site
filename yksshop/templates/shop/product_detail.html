@@ -45,11 +45,54 @@
       gap: 30px;
     }
 
-    .product-image {
+    .product-media {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .main-image {
       width: 400px;
       height: 400px;
-      object-fit: cover;
       border-radius: 8px;
+      overflow: hidden;
+      background: #f1f1f1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .main-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .thumbnail-grid {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .thumbnail {
+      width: 72px;
+      height: 72px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: border-color 0.2s ease;
+    }
+
+    .thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .thumbnail.active {
+      border-color: #007bff;
     }
 
     .product-details {
@@ -72,6 +115,60 @@
       margin-bottom: 15px;
     }
 
+    .size-selector {
+      margin-bottom: 20px;
+    }
+
+    .size-label {
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .size-options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .size-option {
+      padding: 8px 14px;
+      border-radius: 6px;
+      border: 1px solid #007bff;
+      background: white;
+      cursor: pointer;
+      font-weight: 600;
+      color: #007bff;
+      transition: all 0.2s ease;
+    }
+
+    .size-option:hover {
+      background: #007bff;
+      color: white;
+    }
+
+    .size-option.active {
+      background: #007bff;
+      color: white;
+    }
+
+    .size-option:disabled,
+    .size-option.disabled {
+      border-color: #ccc;
+      color: #aaa;
+      cursor: not-allowed;
+      background: #f4f4f4;
+    }
+
+    .stock-status {
+      font-size: 15px;
+      color: #555;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .product-description {
       font-size: 16px;
       color: #555;
@@ -91,6 +188,12 @@
     .add-to-cart-btn:hover {
       background-color: #0056b3;
     }
+
+    .add-to-cart-btn[disabled] {
+      background-color: #ccc;
+      color: #777;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -106,28 +209,136 @@
   </header>
 
   <div class="container">
-    <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-image"
-         onerror="this.src='https://via.placeholder.com/400x400?text=No+Image'">
+    <div class="product-media">
+      <div class="main-image">
+        {% with image_list=product.gallery_images %}
+          {% if image_list %}
+            {% with primary_image=image_list.0 %}
+              <img id="main-product-image"
+                   src="{{ primary_image }}"
+                   alt="{{ product.name }}"
+                   onerror="this.src='https://via.placeholder.com/400x400?text=No+Image'">
+            {% endwith %}
+          {% else %}
+            <img id="main-product-image"
+                 src="https://via.placeholder.com/400x400?text=No+Image"
+                 alt="{{ product.name }}">
+          {% endif %}
+        {% endwith %}
+      </div>
+
+      {% if product.gallery_images|length > 1 %}
+        <div class="thumbnail-grid" id="product-thumbnail-grid">
+          {% for image in product.gallery_images %}
+            <div class="thumbnail{% if forloop.first %} active{% endif %}"
+                 data-image="{{ image }}">
+              <img src="{{ image }}"
+                   alt="{{ product.name }} thumbnail {{ forloop.counter }}"
+                   onerror="this.src='https://via.placeholder.com/100x100?text=No+Image'">
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
 
     <div class="product-details">
       <h2 class="product-name">{{ product.name }}</h2>
       <p class="product-price">Rs.{{ product.price }}</p>
+      <p class="stock-status">
+        {% if product.total_stock > 0 %}
+          <i class="fas fa-check-circle" style="color: #28a745;"></i>
+          In Stock ({{ product.total_stock }})
+        {% else %}
+          <i class="fas fa-times-circle" style="color: #dc3545;"></i>
+          Out of Stock
+        {% endif %}
+      </p>
+      {% if product.has_size_variants %}
+        <div class="size-selector">
+          <div class="size-label">Select Size:</div>
+          <div class="size-options" id="size-options">
+            {% for variant in variants %}
+              <button type="button"
+                      class="size-option{% if variant.stock == 0 %} disabled{% endif %}"
+                      data-size="{{ variant.size }}"
+                      {% if variant.stock == 0 %}disabled{% endif %}>
+                {{ variant.size }}
+                {% if variant.stock == 0 %} (Out){% endif %}
+              </button>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
       <p class="product-description">{{ product.description }}</p>
 
-      <button class="add-to-cart-btn" onclick="addToCart({{ product.id }})">
+      <button class="add-to-cart-btn"
+              {% if product.total_stock == 0 %}
+                disabled
+              {% else %}
+                onclick="addToCart({{ product.id }})"
+              {% endif %}>
         <i class="fas fa-cart-plus"></i> Add to Cart
       </button>
     </div>
   </div>
 
-  <!-- ✅ FIXED SCRIPT -->
   <script>
+  const thumbnailGrid = document.getElementById('product-thumbnail-grid');
+  const mainImage = document.getElementById('main-product-image');
+  const sizeOptions = document.querySelectorAll('.size-option');
+  let selectedSize = null;
+
+  if (thumbnailGrid && mainImage) {
+    thumbnailGrid.addEventListener('click', function(event) {
+      const target = event.target.closest('.thumbnail');
+      if (!target) return;
+
+      const newSrc = target.dataset.image;
+      if (newSrc) {
+        mainImage.src = newSrc;
+
+        const activeThumb = thumbnailGrid.querySelector('.thumbnail.active');
+        if (activeThumb) {
+          activeThumb.classList.remove('active');
+        }
+        target.classList.add('active');
+      }
+    });
+  }
+
+  if (sizeOptions.length > 0) {
+    const firstAvailable = Array.from(sizeOptions).find(button => !button.disabled);
+    if (firstAvailable) {
+      firstAvailable.classList.add('active');
+      selectedSize = firstAvailable.dataset.size;
+    }
+
+    sizeOptions.forEach(button => {
+      if (button.disabled) {
+        return;
+      }
+      button.addEventListener('click', () => {
+        sizeOptions.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        selectedSize = button.dataset.size;
+      });
+    });
+  }
+
   function addToCart(productId) {
     {% if user.is_authenticated %}
+      if (sizeOptions.length > 0 && !selectedSize) {
+        alert('Please select a size before adding to cart.');
+        return;
+      }
+
       const formData = new FormData();
       formData.append('product_id', productId);
       formData.append('quantity', '1');
       formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+      if (selectedSize) {
+        formData.append('size', selectedSize);
+      }
 
       fetch('{% url "add_to_cart" %}', {
         method: 'POST',

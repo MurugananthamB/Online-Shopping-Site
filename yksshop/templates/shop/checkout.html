@@ -327,6 +327,9 @@
         <div class="order-item">
           <div class="item-info">
             <div class="item-name">{{ item.product.name }}</div>
+            {% if item.size %}
+              <div class="item-details">Size: {{ item.size }}</div>
+            {% endif %}
             <div class="item-details">Quantity: {{ item.quantity }} × Rs.{{ item.product.price }}</div>
           </div>
           <div class="item-price">Rs.{{ item.get_total }}</div>

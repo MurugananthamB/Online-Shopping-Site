@@ -4,6 +4,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
+from cloudinary.models import CloudinaryField
 
 
 class Profile(models.Model):
@@ -62,29 +63,95 @@ class Product(models.Model):
     description = models.TextField()
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    image = models.ImageField(upload_to='products/', blank=True, null=True)
+    image = CloudinaryField('image', blank=True, null=True)
     stock = models.PositiveIntegerField(default=0)
     is_available = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return self.name
-
     @property
-    def image_url(self):
+    def get_image_url(self):
         if self.image:
             return self.image.url
+
+        related_image = self.images.filter(image__isnull=False).first()
+        if related_image and related_image.image:
+            return related_image.image.url
+
         return 'https://via.placeholder.com/400x400?text=No+Image'
 
+    @property
+    def gallery_images(self):
+        images = []
 
-# ✅ New Model for Multiple Images per Product
+        if self.image:
+            images.append(self.image.url)
+
+        for related_image in self.images.all():
+            if related_image.image:
+                images.append(related_image.image.url)
+
+        if not images:
+            images.append('https://via.placeholder.com/400x400?text=No+Image')
+
+        # Ensure uniqueness while preserving order
+        seen = set()
+        unique_images = []
+        for url in images:
+            if url not in seen:
+                unique_images.append(url)
+                seen.add(url)
+        return unique_images
+
+    @property
+    def has_size_variants(self):
+        return self.variants.exists()
+
+    @property
+    def total_stock(self):
+        if self.has_size_variants:
+            return sum(variant.stock for variant in self.variants.all())
+        return self.stock
+
+    def get_stock_for_size(self, size):
+        if not size:
+            return self.total_stock
+
+        try:
+            variant = self.variants.get(size=size)
+            return variant.stock
+        except ProductVariant.DoesNotExist:
+            return 0
+
+
+class ProductVariant(models.Model):
+    class Sizes(models.TextChoices):
+        XS = 'XS', 'XS'
+        S = 'S', 'S'
+        M = 'M', 'M'
+        L = 'L', 'L'
+        XL = 'XL', 'XL'
+        XXL = 'XXL', 'XXL'
+
+    product = models.ForeignKey(Product, related_name='variants', on_delete=models.CASCADE)
+    size = models.CharField(max_length=10, choices=Sizes.choices)
+    stock = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        unique_together = ('product', 'size')
+        ordering = ['product', 'size']
+
+    def __str__(self):
+        return f"{self.product.name} - {self.size}"
+
+
 class ProductImage(models.Model):
     product = models.ForeignKey(Product, related_name='images', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='products/')
+    image = CloudinaryField('image', blank=True, null=True)
 
     def __str__(self):
         return f"Image for {self.product.name}"
+
 
 
 class Cart(models.Model):
@@ -106,12 +173,44 @@ class CartItem(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1)
+    size = models.CharField(max_length=10, blank=True, null=True)
 
     def __str__(self):
+        if self.size:
+            return f"{self.quantity} x {self.product.name} ({self.size})"
         return f"{self.quantity} x {self.product.name}"
 
     def get_total(self):
         return self.product.price * self.quantity
+
+    @property
+    def available_stock(self):
+        return self.product.get_stock_for_size(self.size)
+
+
+class HomeHero(models.Model):
+    title = models.CharField(max_length=150, default="Premium Men's Wear Collection")
+    subtitle = models.CharField(
+        max_length=255,
+        default="Discover the latest styles and timeless classics"
+    )
+    primary_button_label = models.CharField(max_length=80, default="Shop the Collection")
+    primary_button_url = models.CharField(max_length=200, default="/shop/")
+    secondary_button_label = models.CharField(max_length=80, blank=True, null=True)
+    secondary_button_url = models.CharField(max_length=200, blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Homepage Hero Content"
+        verbose_name_plural = "Homepage Hero Content"
+
+    def __str__(self):
+        return "Homepage Hero Content"
+
+    @classmethod
+    def get_solo(cls):
+        hero, _ = cls.objects.get_or_create(pk=1)
+        return hero
 
 
 class Order(models.Model):
@@ -159,8 +258,11 @@ class OrderItem(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
+    size = models.CharField(max_length=10, blank=True, null=True)
 
     def __str__(self):
+        if self.size:
+            return f"{self.quantity} x {self.product.name} ({self.size})"
         return f"{self.quantity} x {self.product.name}"
 
     def get_total(self):

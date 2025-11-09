@@ -10,7 +10,18 @@ from django.utils import timezone
 from datetime import timedelta
 import random
 
-from .models import Profile, PendingUser, Category, Product, Cart, CartItem, Order, OrderItem
+from .models import (
+    Profile,
+    PendingUser,
+    Category,
+    Product,
+    ProductVariant,
+    Cart,
+    CartItem,
+    Order,
+    OrderItem,
+    HomeHero,
+)
 from .tokens import account_activation_token  # Ensure this is defined correctly
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required
@@ -227,6 +238,7 @@ def profile_view(request):
 def homepage(request):
     categories = Category.objects.all()
     products = Product.objects.filter(is_available=True)[:12]  # Show 12 products on homepage
+    hero_content = HomeHero.get_solo()
     
     # Get cart count for logged in users
     cart_count = 0
@@ -241,6 +253,7 @@ def homepage(request):
         'categories': categories,
         'products': products,
         'cart_count': cart_count,
+        'hero_content': hero_content,
     }
     return render(request, 'shop/home.html', context)
 
@@ -293,9 +306,13 @@ def product_detail(request, slug):
         except Cart.DoesNotExist:
             pass
     
+    gallery_images = product.gallery_images
+
     context = {
         'product': product,
         'cart_count': cart_count,
+        'gallery_images': gallery_images,
+        'variants': product.variants.all(),
     }
     return render(request, 'shop/product_detail.html', context)
 
@@ -312,25 +329,46 @@ def add_to_cart(request):
     
     product_id = request.POST.get('product_id')
     quantity = int(request.POST.get('quantity', 1))
+    size = request.POST.get('size', '').strip().upper()
     
     try:
         product = Product.objects.get(id=product_id, is_available=True)
-        
-        if product.stock < quantity:
-            return JsonResponse({'success': False, 'message': 'Insufficient stock'})
+
+        variant = None
+        available_stock = product.stock
+
+        if product.has_size_variants:
+            if not size:
+                return JsonResponse({'success': False, 'message': 'Please select a size before adding to cart'})
+            try:
+                variant = product.variants.get(size=size)
+            except ProductVariant.DoesNotExist:
+                return JsonResponse({'success': False, 'message': 'Selected size is not available'})
+            available_stock = variant.stock
+        else:
+            size = None
+            available_stock = product.stock
+
+        if available_stock < quantity:
+            return JsonResponse({'success': False, 'message': 'Insufficient stock for the selected size'})
         
         cart = get_or_create_cart(request.user)
         cart_item, created = CartItem.objects.get_or_create(
             cart=cart,
             product=product,
+            size=size,
             defaults={'quantity': quantity}
         )
         
         if not created:
             cart_item.quantity += quantity
-            if cart_item.quantity > product.stock:
-                cart_item.quantity = product.stock
+            if cart_item.quantity > available_stock:
+                cart_item.quantity = available_stock
             cart_item.save()
+        else:
+            if cart_item.quantity > available_stock:
+                cart_item.quantity = available_stock
+                cart_item.save()
         
         cart_count = cart.get_item_count()
         cart_total = float(cart.get_total())
@@ -370,23 +408,41 @@ def update_cart(request):
         cart_item = CartItem.objects.get(id=cart_item_id, cart__user=request.user)
         
         if quantity <= 0:
+            cart = cart_item.cart
             cart_item.delete()
+            cart_count = cart.get_item_count()
+            cart_total = float(cart.get_total())
+            return JsonResponse({
+                'success': True,
+                'cart_count': cart_count,
+                'cart_total': cart_total,
+                'item_removed': True,
+            })
         else:
-            if quantity > cart_item.product.stock:
-                return JsonResponse({'success': False, 'message': 'Insufficient stock'})
+            product = cart_item.product
+            available_stock = product.stock
+
+            if product.has_size_variants and cart_item.size:
+                available_stock = product.get_stock_for_size(cart_item.size)
+
+            if quantity > available_stock:
+                return JsonResponse({'success': False, 'message': 'Insufficient stock for the selected size'})
             cart_item.quantity = quantity
             cart_item.save()
         
         cart = cart_item.cart
         cart_count = cart.get_item_count()
         cart_total = float(cart.get_total())
-        item_total = float(cart_item.get_total()) if cart_item.quantity > 0 else 0
+        item_total = float(cart_item.get_total())
+        available_stock = cart_item.available_stock
         
         return JsonResponse({
             'success': True,
             'cart_count': cart_count,
             'cart_total': cart_total,
-            'item_total': item_total
+            'item_removed': False,
+            'item_total': item_total,
+            'available_stock': available_stock,
         })
     except CartItem.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Cart item not found'})
@@ -462,8 +518,16 @@ def place_order(request):
     
     # Check stock availability
     for item in cart_items:
-        if item.quantity > item.product.stock:
-            return JsonResponse({'success': False, 'message': f'Insufficient stock for {item.product.name}'})
+        product = item.product
+        available_stock = product.stock
+
+        if product.has_size_variants and item.size:
+            available_stock = product.get_stock_for_size(item.size)
+            if available_stock < item.quantity:
+                return JsonResponse({'success': False, 'message': f'Insufficient stock for {product.name} (Size {item.size})'})
+        else:
+            if item.quantity > available_stock:
+                return JsonResponse({'success': False, 'message': f'Insufficient stock for {product.name}'})
     
     # Create order
     order = Order.objects.create(
@@ -484,11 +548,25 @@ def place_order(request):
             order=order,
             product=item.product,
             quantity=item.quantity,
-            price=item.product.price
+            price=item.product.price,
+            size=item.size
         )
-        # Update product stock
-        item.product.stock -= item.quantity
-        item.product.save()
+        # Update product stock / variant stock
+        product = item.product
+        if product.has_size_variants and item.size:
+            try:
+                variant = product.variants.get(size=item.size)
+                variant.stock = max(variant.stock - item.quantity, 0)
+                variant.save()
+                product.stock = product.total_stock
+                product.is_available = product.total_stock > 0
+                product.save(update_fields=['stock', 'is_available'])
+            except ProductVariant.DoesNotExist:
+                pass
+        else:
+            product.stock = max(product.stock - item.quantity, 0)
+            product.is_available = product.stock > 0
+            product.save(update_fields=['stock', 'is_available'])
     
     # Clear cart
     cart_items.delete()

@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 load_dotenv()
+import cloudinary
 
 
 
@@ -150,7 +151,7 @@ STATIC_URL = 'static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Ensure media directory exists
+# Ensure media directories exist for product uploads (safe no-op if they already exist)
 os.makedirs(MEDIA_ROOT, exist_ok=True)
 os.makedirs(os.path.join(MEDIA_ROOT, 'products'), exist_ok=True)
 
@@ -188,8 +189,19 @@ CLOUDINARY_STORAGE = {
     'CLOUD_NAME': os.environ.get('CLOUD_NAME'),
     'API_KEY': os.environ.get('API_KEY'),
     'API_SECRET': os.environ.get('API_SECRET'),
+    'SECURE': True,
+    'RESOURCE_TYPES': ['image'],
 }
 
+if os.environ.get('CLOUDINARY_URL'):
+    cloudinary.config(cloudinary_url=os.environ['CLOUDINARY_URL'])
+else:
+    cloudinary.config(
+        cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+        api_key=CLOUDINARY_STORAGE['API_KEY'],
+        api_secret=CLOUDINARY_STORAGE['API_SECRET'],
+        secure=True,
+    )
 
 # REST Framework Configuration with JWT
 REST_FRAMEWORK = {

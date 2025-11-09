@@ -131,6 +131,12 @@
       margin-bottom: 15px;
     }
 
+    .product-stock {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 10px;
+    }
+
     .add-to-cart-btn {
       background-color: #007bff;
       color: white;
@@ -143,6 +149,12 @@
     }
 
     .add-to-cart-btn:hover { background-color: #0056b3; }
+
+    .add-to-cart-btn[disabled] {
+      background-color: #ccc;
+      color: #777;
+      cursor: not-allowed;
+    }
   </style>
 </head>
 <body>
@@ -179,7 +191,7 @@
       {% for product in products %}
         <div class="product-card">
           <a href="{% url 'product_detail' product.slug %}">
-            <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-image"
+            <img src="{{ product.get_image_url }}" alt="{{ product.name }}" class="product-image"
                  onerror="this.src='https://via.placeholder.com/400x400?text=No+Image'">
           </a>
           <div class="product-info">
@@ -187,9 +199,24 @@
               <h3 class="product-name">{{ product.name }}</h3>
             </a>
             <p class="product-price">Rs.{{ product.price }}</p>
-            <button class="add-to-cart-btn" onclick="addToCart({{ product.id }})">
-              <i class="fas fa-cart-plus"></i> Add to Cart
-            </button>
+            <p class="product-stock">
+              {% if product.total_stock > 0 %}
+                <i class="fas fa-check-circle" style="color: #28a745;"></i> In Stock ({{ product.total_stock }})
+              {% else %}
+                <i class="fas fa-times-circle" style="color: #dc3545;"></i> Out of Stock
+              {% endif %}
+            </p>
+            {% if product.has_size_variants %}
+              <a class="add-to-cart-btn" href="{% url 'product_detail' product.slug %}">
+                <i class="fas fa-ruler-combined"></i> Select Size
+              </a>
+            {% else %}
+              <button class="add-to-cart-btn"
+                      onclick="addToCart({{ product.id }})"
+                      {% if product.total_stock == 0 %}disabled{% endif %}>
+                <i class="fas fa-cart-plus"></i> Add to Cart
+              </button>
+            {% endif %}
           </div>
         </div>
       {% empty %}

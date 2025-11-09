@@ -10,6 +10,6 @@ whitenoise
 gunicorn
 Pillow
 twilio
-cloudinary 
+cloudinary
 django-cloudinary-storage
 python-dotenv
