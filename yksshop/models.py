@@ -5,6 +5,7 @@ from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.auth.hashers import make_password, check_password
 
+
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     phone = models.CharField(max_length=20)
@@ -12,16 +13,14 @@ class Profile(models.Model):
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.user.email})"
 
-# Automatically create a Profile when a new User is created
+
 @receiver(post_save, sender=User)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
     else:
-        # Optional: Ensure profile exists before saving
         if hasattr(instance, 'profile'):
             instance.profile.save()
-
 
 
 class PendingUser(models.Model):
@@ -29,7 +28,7 @@ class PendingUser(models.Model):
     first_name = models.CharField(max_length=150)
     last_name = models.CharField(max_length=150)
     phone = models.CharField(max_length=20)
-    password_hash = models.CharField(max_length=128)  # Store hashed password
+    password_hash = models.CharField(max_length=128)
     otp = models.CharField(max_length=6)
     is_email_verified = models.BooleanField(default=False)
     otp_created_at = models.DateTimeField(default=timezone.now)
@@ -44,7 +43,6 @@ class PendingUser(models.Model):
         return self.email
 
 
-# E-commerce Models
 class Category(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(unique=True)
@@ -78,6 +76,15 @@ class Product(models.Model):
         if self.image:
             return self.image.url
         return 'https://via.placeholder.com/400x400?text=No+Image'
+
+
+# ✅ New Model for Multiple Images per Product
+class ProductImage(models.Model):
+    product = models.ForeignKey(Product, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='products/')
+
+    def __str__(self):
+        return f"Image for {self.product.name}"
 
 
 class Cart(models.Model):
@@ -126,15 +133,14 @@ class Order(models.Model):
     payment_method = models.CharField(max_length=10, choices=PAYMENT_CHOICES)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    
-    # Shipping details
+
     shipping_name = models.CharField(max_length=100)
     shipping_phone = models.CharField(max_length=20)
     shipping_address = models.TextField()
     shipping_city = models.CharField(max_length=100)
     shipping_state = models.CharField(max_length=100)
     shipping_pincode = models.CharField(max_length=10)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -143,8 +149,7 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.order_number:
-            import random
-            import string
+            import random, string
             self.order_number = ''.join(random.choices(string.ascii_uppercase + string.digits, k=10))
         super().save(*args, **kwargs)
 

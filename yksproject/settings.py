@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
+    'cloudinary',
+    'cloudinary_storage',
 ]
 SITE_ID = 1
 
@@ -174,11 +176,17 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_TIMEOUT = 5  # 5 second timeout to prevent worker timeouts
 
-EMAIL_HOST_USER = 'yksshop2025@gmail.com'      # your real Gmail address
-EMAIL_HOST_PASSWORD = 'sbyogdqfzgvrqrml'    # your Gmail app password (see below)
+EMAIL_HOST_USER =  os.environ.get('EMAIL_HOST_USER')      # your real Gmail address
+EMAIL_HOST_PASSWORD =  os.environ.get('EMAIL_HOST_PASSWORD')    # your Gmail app password (see below)
 DEFAULT_FROM_EMAIL = "YKS Men's Wear <no-reply@yksshop.com>"
 
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': os.environ.get('CLOUD_NAME'),
+    'API_KEY': os.environ.get('API_KEY'),
+    'API_SECRET': os.environ.get('API_SECRET'),
+}
 
 
 # REST Framework Configuration with JWT

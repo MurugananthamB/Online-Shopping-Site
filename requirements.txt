@@ -10,3 +10,5 @@ whitenoise
 gunicorn
 Pillow
 twilio
+cloudinary 
+django-cloudinary-storage
