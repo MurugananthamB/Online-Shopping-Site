@@ -26,17 +26,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-pjxy9%c6f1st4%qe^v_!u-x4ce#yb5m^v_uy3m!ez!gbkbatv7'
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'django-insecure-pjxy9%c6f1st4%qe^v_!u-x4ce#yb5m^v_uy3m!ez!gbkbatv7',
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 ALLOWED_HOSTS = ['yksshop.onrender.com', 'localhost', '127.0.0.1']
 
 
 STATIC_URL = '/static/'
-STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Application definition
@@ -177,25 +179,23 @@ EMAIL_BACKEND = os.environ.get(
     'EMAIL_BACKEND',
     'django.core.mail.backends.smtp.EmailBackend',
 )
-
-
-# EMAIL_USE_TLS = True
-# EMAIL_TIMEOUT = 5  # 5 second timeout to prevent worker timeouts
-
-# EMAIL_HOST_USER =  os.environ.get('EMAIL_HOST_USER')      # your real Gmail address
-# EMAIL_HOST_PASSWORD =  os.environ.get('EMAIL_HOST_PASSWORD')    # your Gmail app password (see below)
-# DEFAULT_FROM_EMAIL = "YKS Men's Wear <no-reply@yksshop.com>"
-
-# #EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
-#EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.sendgrid.net')
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True")
-#EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "False")
 EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", 10))
 
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'your_email@gmail.com')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+if DEBUG:
+    EMAIL_HOST = os.environ.get('DEV_EMAIL_HOST', 'smtp.gmail.com')
+    EMAIL_PORT = int(os.environ.get('DEV_EMAIL_PORT', 587))
+    EMAIL_USE_TLS = os.environ.get('DEV_EMAIL_USE_TLS', 'True').lower() == 'true'
+    EMAIL_USE_SSL = os.environ.get('DEV_EMAIL_USE_SSL', 'False').lower() == 'true'
+    EMAIL_HOST_USER = os.environ.get('DEV_EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('DEV_EMAIL_HOST_PASSWORD', '')
+else:
+    EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.sendgrid.net')
+    EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
+    EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True").lower() == "true"
+    EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "False").lower() == "true"
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+
 DEFAULT_FROM_EMAIL = os.environ.get(
     'DEFAULT_FROM_EMAIL',
     "YKS Men's Wear <no-reply@yksshop.com>",
