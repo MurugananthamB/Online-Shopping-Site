@@ -411,3 +411,4 @@ Check Django logs for debugging. In production, configure proper logging handler
 ---
 
 **Note**: This project uses SQLite3 for development. For production, consider migrating to PostgreSQL or MySQL for better performance and scalability.
+
