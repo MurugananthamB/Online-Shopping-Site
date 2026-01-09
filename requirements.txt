@@ -13,3 +13,4 @@ twilio
 cloudinary
 django-cloudinary-storage
 python-dotenv
+razorpay

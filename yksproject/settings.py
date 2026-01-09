@@ -35,7 +35,7 @@ SECRET_KEY = os.environ.get(
 DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-ALLOWED_HOSTS = ['yksshop.onrender.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['online-shopping-site-ummr.onrender.com,yksshop.onrender.com', 'localhost', '127.0.0.1']
 
 
 STATIC_URL = '/static/'
@@ -271,3 +271,8 @@ WHATSAPP_ENABLED = False  # Set to True after configuring Twilio
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
 TWILIO_WHATSAPP_FROM = os.environ.get('TWILIO_WHATSAPP_FROM', '')  # Format: +14155238886
+
+# Razorpay Payment Gateway Settings
+# Get your credentials from: https://dashboard.razorpay.com/app/keys
+RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', '')
+RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', '')

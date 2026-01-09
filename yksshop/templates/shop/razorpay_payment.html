@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Payment - YKS Men's Wear</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .payment-container {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .payment-header {
+      margin-bottom: 30px;
+    }
+
+    .payment-header h1 {
+      color: #007bff;
+      font-size: 28px;
+      margin-bottom: 10px;
+    }
+
+    .payment-header p {
+      color: #666;
+      font-size: 16px;
+    }
+
+    .order-summary {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+      text-align: left;
+    }
+
+    .order-summary h3 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      color: #666;
+    }
+
+    .summary-row.total {
+      font-size: 18px;
+      font-weight: bold;
+      color: #007bff;
+      padding-top: 10px;
+      border-top: 2px solid #ddd;
+      margin-top: 10px;
+    }
+
+    .pay-button {
+      width: 100%;
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .pay-button:hover {
+      background: #0056b3;
+    }
+
+    .pay-button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .cancel-link {
+      display: inline-block;
+      margin-top: 20px;
+      color: #666;
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .cancel-link:hover {
+      color: #007bff;
+    }
+
+    .loading {
+      display: none;
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    .loading i {
+      font-size: 24px;
+      color: #007bff;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="payment-container">
+    <div class="payment-header">
+      <h1><i class="fas fa-credit-card"></i> Complete Payment</h1>
+      <p>Order #{{ order.order_number }}</p>
+    </div>
+
+    <div class="order-summary">
+      <h3>Order Summary</h3>
+      <div class="summary-row">
+        <span>Order Amount:</span>
+        <span>₹{{ order.total_amount }}</span>
+      </div>
+      <div class="summary-row">
+        <span>Payment Method:</span>
+        <span>Online Payment</span>
+      </div>
+      <div class="summary-row total">
+        <span>Total Amount:</span>
+        <span>₹{{ order.total_amount }}</span>
+      </div>
+    </div>
+
+    <button class="pay-button" id="rzp-button1">
+      <i class="fas fa-wallet"></i>
+      Pay ₹{{ order.total_amount }}
+    </button>
+
+    <a href="{% url 'view_cart' %}" class="cancel-link">
+      <i class="fas fa-times"></i> Cancel Payment
+    </a>
+
+    <div class="loading" id="loading">
+      <i class="fas fa-spinner fa-spin"></i>
+      <p>Processing payment...</p>
+    </div>
+  </div>
+
+  <script>
+    var options = {
+      "key": "{{ razorpay_key_id }}",
+      "amount": {{ razorpay_amount }},
+      "currency": "{{ razorpay_currency }}",
+      "name": "YKS Men's Wear",
+      "description": "Order #{{ order.order_number }}",
+      "image": "https://your-domain.com/logo.png",
+      "order_id": "{{ razorpay_order_id }}",
+      "handler": function (response) {
+        // Handle successful payment
+        document.getElementById('rzp-button1').disabled = true;
+        document.getElementById('loading').style.display = 'block';
+        
+        // Send payment details to server for verification
+        fetch('{% url "razorpay_payment_success" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: new URLSearchParams({
+            'razorpay_payment_id': response.razorpay_payment_id,
+            'razorpay_order_id': response.razorpay_order_id,
+            'razorpay_signature': response.razorpay_signature,
+            'order_id': '{{ order.id }}'
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            window.location.href = data.redirect_url;
+          } else {
+            alert('Payment verification failed: ' + data.message);
+            window.location.href = '{% url "razorpay_payment_failure" order.id %}';
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('An error occurred while processing your payment. Please contact support.');
+          window.location.href = '{% url "razorpay_payment_failure" order.id %}';
+        });
+      },
+      "prefill": {
+        "name": "{{ user_name }}",
+        "email": "{{ user_email }}",
+        "contact": "{{ user_phone }}"
+      },
+      "notes": {
+        "order_id": "{{ order.id }}",
+        "order_number": "{{ order.order_number }}"
+      },
+      "theme": {
+        "color": "#007bff"
+      },
+      "modal": {
+        "ondismiss": function() {
+          // User closed the payment modal without completing payment
+          if (confirm('Are you sure you want to cancel the payment?')) {
+            window.location.href = '{% url "razorpay_payment_failure" order.id %}';
+          }
+        }
+      }
+    };
+
+    var rzp1 = new Razorpay(options);
+    
+    document.getElementById('rzp-button1').onclick = function(e) {
+      e.preventDefault();
+      rzp1.open();
+    };
+
+    // Auto-open payment modal when page loads
+    window.onload = function() {
+      rzp1.open();
+    };
+  </script>
+
+</body>
+</html>

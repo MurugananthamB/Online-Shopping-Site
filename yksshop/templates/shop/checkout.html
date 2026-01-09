@@ -381,10 +381,16 @@
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          showNotification(data.message);
-          setTimeout(() => {
+          if (data.payment_method === 'razorpay') {
+            // Redirect to Razorpay payment page
             window.location.href = data.redirect_url;
-          }, 1500);
+          } else {
+            // Cash on delivery - redirect to success page
+            showNotification(data.message);
+            setTimeout(() => {
+              window.location.href = data.redirect_url;
+            }, 1500);
+          }
         } else {
           showNotification(data.message, 'error');
           btn.disabled = false;

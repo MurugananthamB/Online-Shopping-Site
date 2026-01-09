@@ -240,6 +240,11 @@ class Order(models.Model):
     shipping_state = models.CharField(max_length=100)
     shipping_pincode = models.CharField(max_length=10)
 
+    # Razorpay payment fields
+    razorpay_order_id = models.CharField(max_length=100, blank=True, null=True)
+    razorpay_payment_id = models.CharField(max_length=100, blank=True, null=True)
+    razorpay_signature = models.CharField(max_length=200, blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

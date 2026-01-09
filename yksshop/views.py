@@ -9,6 +9,10 @@ from django.urls import reverse
 from django.utils import timezone
 from datetime import timedelta
 import random
+import razorpay
+from django.conf import settings
+import hmac
+import hashlib
 
 from .models import (
     Profile,
@@ -568,22 +572,48 @@ def place_order(request):
             product.is_available = product.stock > 0
             product.save(update_fields=['stock', 'is_available'])
     
-    # Clear cart
-    cart_items.delete()
-    
     if payment_method == 'online':
-        # In a real application, integrate with payment gateway here
-        # For now, we'll just mark it as processing
-        order.status = 'processing'
-        order.save()
+        # For online payment, we need to create a Razorpay order first
+        # Don't clear cart or update stock yet - wait for payment confirmation
+        # Return order ID to initiate Razorpay payment
         return JsonResponse({
             'success': True,
-            'message': 'Order placed successfully',
+            'message': 'Redirecting to payment...',
             'order_id': order.id,
-            'redirect_url': f'/order-success/{order.id}/'
+            'payment_method': 'razorpay',
+            'redirect_url': f'/create-razorpay-order/{order.id}/'
         })
     else:
-        # Cash on delivery
+        # Cash on delivery - complete the order immediately
+        # Create order items and update stock
+        for item in cart_items:
+            OrderItem.objects.create(
+                order=order,
+                product=item.product,
+                quantity=item.quantity,
+                price=item.product.price,
+                size=item.size
+            )
+            # Update product stock / variant stock
+            product = item.product
+            if product.has_size_variants and item.size:
+                try:
+                    variant = product.variants.get(size=item.size)
+                    variant.stock = max(variant.stock - item.quantity, 0)
+                    variant.save()
+                    product.stock = product.total_stock
+                    product.is_available = product.total_stock > 0
+                    product.save(update_fields=['stock', 'is_available'])
+                except ProductVariant.DoesNotExist:
+                    pass
+            else:
+                product.stock = max(product.stock - item.quantity, 0)
+                product.is_available = product.stock > 0
+                product.save(update_fields=['stock', 'is_available'])
+        
+        # Clear cart
+        cart_items.delete()
+        
         order.status = 'pending'
         order.save()
         return JsonResponse({
@@ -628,3 +658,168 @@ def order_detail(request, order_id):
         'order': order,
     }
     return render(request, 'shop/order_detail.html', context)
+
+
+# Razorpay Payment Views
+@login_required
+def create_razorpay_order(request, order_id):
+    """Create a Razorpay order and return payment details"""
+    try:
+        order = Order.objects.get(id=order_id, user=request.user)
+    except Order.DoesNotExist:
+        return render(request, 'shop/payment_failure.html', {
+            'order_id': order_id,
+            'error_message': 'Order not found'
+        })
+    
+    if order.payment_method != 'online':
+        return render(request, 'shop/payment_failure.html', {
+            'order_id': order_id,
+            'error_message': 'Invalid payment method'
+        })
+    
+    # Check if Razorpay credentials are configured
+    if not settings.RAZORPAY_KEY_ID or not settings.RAZORPAY_KEY_SECRET:
+        return render(request, 'shop/payment_failure.html', {
+            'order_id': order_id,
+            'error_message': 'Payment gateway not configured. Please contact support.'
+        })
+    
+    if order.razorpay_order_id:
+        # Order already created, return existing order details
+        razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        razorpay_orders = razorpay_client.order.fetch(order.razorpay_order_id)
+    else:
+        # Create new Razorpay order
+        amount = int(float(order.total_amount) * 100)  # Convert to paise
+        
+        razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        
+        razorpay_orders = razorpay_client.order.create({
+            'amount': amount,
+            'currency': 'INR',
+            'receipt': f'order_{order.id}',
+            'notes': {
+                'order_id': str(order.id),
+                'user_id': str(order.user.id),
+            }
+        })
+        
+        # Save Razorpay order ID
+        order.razorpay_order_id = razorpay_orders['id']
+        order.save()
+    
+    context = {
+        'order': order,
+        'razorpay_order_id': razorpay_orders['id'],
+        'razorpay_amount': razorpay_orders['amount'],
+        'razorpay_currency': razorpay_orders['currency'],
+        'razorpay_key_id': settings.RAZORPAY_KEY_ID,
+        'user_name': order.user.get_full_name() or order.user.username,
+        'user_email': order.user.email,
+        'user_phone': order.shipping_phone,
+    }
+    return render(request, 'shop/razorpay_payment.html', context)
+
+
+@login_required
+@require_POST
+def razorpay_payment_success(request):
+    """Handle successful Razorpay payment"""
+    try:
+        razorpay_payment_id = request.POST.get('razorpay_payment_id')
+        razorpay_order_id = request.POST.get('razorpay_order_id')
+        razorpay_signature = request.POST.get('razorpay_signature')
+        order_id = request.POST.get('order_id')
+        
+        order = Order.objects.get(id=order_id, user=request.user, razorpay_order_id=razorpay_order_id)
+        
+        # Verify the payment signature
+        razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        
+        # Generate signature to verify
+        message = f"{razorpay_order_id}|{razorpay_payment_id}"
+        generated_signature = hmac.new(
+            settings.RAZORPAY_KEY_SECRET.encode('utf-8'),
+            message.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        
+        if generated_signature != razorpay_signature:
+            # Signature verification failed
+            order.status = 'cancelled'
+            order.save()
+            return JsonResponse({'success': False, 'message': 'Payment verification failed'})
+        
+        # Verify payment with Razorpay
+        payment = razorpay_client.payment.fetch(razorpay_payment_id)
+        
+        if payment['status'] != 'captured' and payment['status'] != 'authorized':
+            order.status = 'cancelled'
+            order.save()
+            return JsonResponse({'success': False, 'message': 'Payment not successful'})
+        
+        # Payment successful - update order
+        order.razorpay_payment_id = razorpay_payment_id
+        order.razorpay_signature = razorpay_signature
+        order.status = 'processing'
+        
+        # Create order items and update stock (only if items don't exist)
+        if not order.items.exists():
+            cart = get_or_create_cart(request.user)
+            cart_items = cart.items.all()
+            
+            for item in cart_items:
+                OrderItem.objects.create(
+                    order=order,
+                    product=item.product,
+                    quantity=item.quantity,
+                    price=item.product.price,
+                    size=item.size
+                )
+                # Update product stock / variant stock
+                product = item.product
+                if product.has_size_variants and item.size:
+                    try:
+                        variant = product.variants.get(size=item.size)
+                        variant.stock = max(variant.stock - item.quantity, 0)
+                        variant.save()
+                        product.stock = product.total_stock
+                        product.is_available = product.total_stock > 0
+                        product.save(update_fields=['stock', 'is_available'])
+                    except ProductVariant.DoesNotExist:
+                        pass
+                else:
+                    product.stock = max(product.stock - item.quantity, 0)
+                    product.is_available = product.stock > 0
+                    product.save(update_fields=['stock', 'is_available'])
+            
+            # Clear cart
+            cart_items.delete()
+        
+        order.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Payment successful! Your order has been placed.',
+            'order_id': order.id,
+            'redirect_url': f'/order-success/{order.id}/'
+        })
+        
+    except Order.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Order not found'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error processing payment: {str(e)}'})
+
+
+@login_required
+def razorpay_payment_failure(request, order_id):
+    """Handle failed Razorpay payment"""
+    try:
+        order = Order.objects.get(id=order_id, user=request.user)
+        order.status = 'cancelled'
+        order.save()
+    except Order.DoesNotExist:
+        pass
+    
+    return render(request, 'shop/payment_failure.html', {'order_id': order_id})
