@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Checkout - YKS Men's Wear</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+    }
+
+    header {
+      background-color: #fff;
+      padding: 15px 40px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      color: #007bff;
+      font-size: 24px;
+    }
+
+    nav a {
+      color: #333;
+      text-decoration: none;
+      margin-left: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 20px;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 30px;
+    }
+
+    .checkout-section {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .section-title {
+      font-size: 24px;
+      margin-bottom: 25px;
+      color: #333;
+      border-bottom: 2px solid #007bff;
+      padding-bottom: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    input[type="text"],
+    input[type="tel"],
+    textarea,
+    select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.3s;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      outline: none;
+      border-color: #007bff;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    .payment-methods {
+      display: flex;
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .payment-option {
+      flex: 1;
+      padding: 20px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-align: center;
+    }
+
+    .payment-option:hover {
+      border-color: #007bff;
+    }
+
+    .payment-option.selected {
+      border-color: #007bff;
+      background: #f0f7ff;
+    }
+
+    .payment-option input[type="radio"] {
+      margin-bottom: 10px;
+    }
+
+    .payment-option i {
+      font-size: 32px;
+      color: #007bff;
+      margin-bottom: 10px;
+    }
+
+    .order-summary {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      height: fit-content;
+      position: sticky;
+      top: 100px;
+    }
+
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .order-item:last-child {
+      border-bottom: none;
+    }
+
+    .item-info {
+      flex: 1;
+    }
+
+    .item-name {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .item-details {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .item-price {
+      font-weight: 600;
+      color: #28a745;
+    }
+
+    .summary-total {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 2px solid #eee;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    .total-row.final {
+      font-size: 24px;
+      font-weight: bold;
+      color: #007bff;
+    }
+
+    .place-order-btn {
+      width: 100%;
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 15px;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: background 0.3s;
+    }
+
+    .place-order-btn:hover {
+      background: #218838;
+    }
+
+    .place-order-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .notification {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      padding: 15px 20px;
+      background: #28a745;
+      color: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      z-index: 2000;
+      display: none;
+    }
+
+    .notification.error {
+      background: #dc3545;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1><i class="fas fa-tshirt"></i> YKS Men's Wear</h1>
+    <nav>
+      <a href="{% url 'homepage' %}">Home</a>
+      <a href="{% url 'view_cart' %}">Cart</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <div class="checkout-section">
+      <h2 class="section-title"><i class="fas fa-shipping-fast"></i> Shipping Details</h2>
+      
+      <form id="checkout-form">
+        <div class="form-group">
+          <label for="shipping_name">Full Name *</label>
+          <input type="text" id="shipping_name" name="shipping_name" required 
+                 value="{% if profile %}{{ user.get_full_name }}{% endif %}">
+        </div>
+
+        <div class="form-group">
+          <label for="shipping_phone">Phone Number *</label>
+          <input type="tel" id="shipping_phone" name="shipping_phone" required
+                 value="{% if profile %}{{ profile.phone }}{% endif %}">
+        </div>
+
+        <div class="form-group">
+          <label for="shipping_address">Address *</label>
+          <textarea id="shipping_address" name="shipping_address" required></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="shipping_city">City *</label>
+            <input type="text" id="shipping_city" name="shipping_city" required>
+          </div>
+
+          <div class="form-group">
+            <label for="shipping_state">State *</label>
+            <input type="text" id="shipping_state" name="shipping_state" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="shipping_pincode">Pincode *</label>
+          <input type="text" id="shipping_pincode" name="shipping_pincode" required pattern="[0-9]{6}">
+        </div>
+
+        <h3 class="section-title" style="margin-top: 30px;"><i class="fas fa-credit-card"></i> Payment Method</h3>
+        
+        <div class="payment-methods">
+          <div class="payment-option" onclick="selectPayment('online', this)">
+            <input type="radio" name="payment_method" value="online" id="payment_online" required>
+            <i class="fas fa-credit-card"></i>
+            <div>Online Payment</div>
+            <small>Pay securely with card</small>
+          </div>
+          <div class="payment-option selected" onclick="selectPayment('cod', this)">
+            <input type="radio" name="payment_method" value="cod" id="payment_cod" checked required>
+            <i class="fas fa-money-bill-wave"></i>
+            <div>Cash on Delivery</div>
+            <small>Pay when you receive</small>
+          </div>
+        </div>
+
+        <button type="submit" class="place-order-btn" id="place-order-btn">
+          <i class="fas fa-check"></i> Place Order
+        </button>
+      </form>
+    </div>
+
+    <div class="order-summary">
+      <h2 class="section-title">Order Summary</h2>
+      
+      {% for item in cart_items %}
+        <div class="order-item">
+          <div class="item-info">
+            <div class="item-name">{{ item.product.name }}</div>
+            {% if item.size %}
+              <div class="item-details">Size: {{ item.size }}</div>
+            {% endif %}
+            <div class="item-details">Quantity: {{ item.quantity }} × Rs.{{ item.product.price }}</div>
+          </div>
+          <div class="item-price">Rs.{{ item.get_total }}</div>
+        </div>
+      {% endfor %}
+
+      <div class="summary-total">
+        <div class="total-row">
+          <span>Subtotal:</span>
+          <span>Rs.{{ cart.get_total }}</span>
+        </div>
+        <div class="total-row">
+          <span>Shipping:</span>
+          <span>Free</span>
+        </div>
+        <div class="total-row final">
+          <span>Total:</span>
+          <span>Rs.{{ cart.get_total }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notification" id="notification"></div>
+
+  <!-- Razorpay Checkout Script -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <script>
+    function selectPayment(method, element) {
+      document.querySelectorAll('.payment-option').forEach(opt => {
+        opt.classList.remove('selected');
+      });
+      element.classList.add('selected');
+      document.getElementById('payment_' + method).checked = true;
+      const btn = document.getElementById('place-order-btn');
+      btn.innerHTML = method === 'online'
+        ? '<i class="fas fa-credit-card"></i> Pay Online'
+        : '<i class="fas fa-check"></i> Place Order';
+    }
+
+    document.getElementById('checkout-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const btn = document.getElementById('place-order-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+      const formData = new FormData(this);
+      formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+      const paymentMethod = formData.get('payment_method');
+
+      fetch('{% url "place_order" %}', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          if (data.redirect_to_payment && paymentMethod === 'online') {
+            // Initialize Razorpay checkout
+            const options = {
+              key: data.key_id,
+              amount: data.amount,
+              currency: 'INR',
+              name: 'YKS Men\'s Wear',
+              description: 'Order Payment',
+              order_id: data.razorpay_order_id,
+              handler: function(response) {
+                // Payment successful - verify on server
+                const paymentData = new FormData();
+                paymentData.append('razorpay_order_id', response.razorpay_order_id);
+                paymentData.append('razorpay_payment_id', response.razorpay_payment_id);
+                paymentData.append('razorpay_signature', response.razorpay_signature);
+                paymentData.append('order_id', data.order_id);
+                paymentData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                fetch('{% url "payment_success" %}', {
+                  method: 'POST',
+                  body: paymentData
+                })
+                .then(res => res.json())
+                .then(result => {
+                  if (result.success) {
+                    showNotification(result.message);
+                    setTimeout(() => {
+                      window.location.href = result.redirect_url;
+                    }, 1500);
+                  } else {
+                    showNotification(result.message, 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check"></i> Place Order';
+                  }
+                })
+                .catch(error => {
+                  showNotification('Payment verification failed. Please contact support.', 'error');
+                  btn.disabled = false;
+                  btn.innerHTML = '<i class="fas fa-check"></i> Place Order';
+                });
+              },
+              prefill: {
+                name: document.getElementById('shipping_name').value,
+                email: '{{ user.email }}',
+                contact: document.getElementById('shipping_phone').value
+              },
+              theme: {
+                color: '#007bff'
+              },
+              modal: {
+                ondismiss: function() {
+                  // Payment cancelled
+                  const cancelData = new FormData();
+                  cancelData.append('razorpay_order_id', data.razorpay_order_id);
+                  cancelData.append('order_id', data.order_id);
+                  cancelData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+                  fetch('{% url "payment_failure" %}', {
+                    method: 'POST',
+                    body: cancelData
+                  });
+
+                  btn.disabled = false;
+                  btn.innerHTML = '<i class="fas fa-check"></i> Place Order';
+                  showNotification('Payment cancelled', 'error');
+                }
+              }
+            };
+
+            const razorpay = new Razorpay(options);
+            razorpay.open();
+            razorpay.on('payment.failed', function(response) {
+              // Payment failed
+              const failData = new FormData();
+              failData.append('razorpay_order_id', data.razorpay_order_id);
+              failData.append('order_id', data.order_id);
+              failData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+              fetch('{% url "payment_failure" %}', {
+                method: 'POST',
+                body: failData
+              });
+
+              showNotification('Payment failed. Please try again.', 'error');
+              btn.disabled = false;
+              btn.innerHTML = '<i class="fas fa-check"></i> Place Order';
+            });
+          } else {
+            // COD or other payment methods
+            showNotification(data.message);
+            setTimeout(() => {
+              window.location.href = data.redirect_url;
+            }, 1500);
+          }
+        } else {
+          showNotification(data.message, 'error');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-check"></i> Place Order';
+        }
+      })
+      .catch(error => {
+        showNotification('An error occurred. Please try again.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check"></i> Place Order';
+      });
+    });
+
+    function showNotification(message, type = 'success') {
+      const notification = document.getElementById('notification');
+      notification.textContent = message;
+      notification.className = 'notification ' + (type === 'error' ? 'error' : '');
+      notification.style.display = 'block';
+      
+      setTimeout(() => {
+        notification.style.display = 'none';
+      }, 3000);
+    }
+  </script>
+
+</body>
+</html>
+

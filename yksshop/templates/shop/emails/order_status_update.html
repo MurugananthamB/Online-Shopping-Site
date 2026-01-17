@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Status Update</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            border-bottom: 3px solid #007bff;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+        .status-pending { background-color: #ffc107; color: #000; }
+        .status-processing { background-color: #17a2b8; color: white; }
+        .status-shipped { background-color: #007bff; color: white; }
+        .status-delivered { background-color: #28a745; color: white; }
+        .status-cancelled { background-color: #dc3545; color: white; }
+        .order-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 14px;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦 Order Status Update</h1>
+            <p>Hello {{ user.first_name|default:user.username }},</p>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <div class="status-badge status-{{ order.status }}">
+                {{ order.get_status_display }}
+            </div>
+        </div>
+
+        <p style="font-size: 18px; text-align: center; color: #666;">
+            {{ status_message }}
+        </p>
+
+        <div class="order-info">
+            <div class="info-row">
+                <span style="font-weight: 600; color: #666;">Order Number:</span>
+                <span><strong>{{ order.order_number }}</strong></span>
+            </div>
+            <div class="info-row">
+                <span style="font-weight: 600; color: #666;">Total Amount:</span>
+                <span style="color: #28a745; font-weight: bold;">Rs.{{ order.total_amount }}</span>
+            </div>
+            <div class="info-row">
+                <span style="font-weight: 600; color: #666;">Updated On:</span>
+                <span>{{ order.updated_at|date:"F d, Y h:i A" }}</span>
+            </div>
+        </div>
+
+        {% if order.status == 'shipped' %}
+        <div style="background-color: #e7f3ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0;">🚚 Your order is on the way! Expected delivery: 3-5 business days.</p>
+        </div>
+        {% elif order.status == 'delivered' %}
+        <div style="background-color: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 0;">✅ Your order has been delivered! We hope you love your purchase.</p>
+        </div>
+        {% endif %}
+
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="{{ site_url }}/order/{{ order.id }}/" class="button">View Order Details</a>
+        </div>
+
+        <div class="footer">
+            <p>If you have any questions, please contact us at support@yksmenswear.com</p>
+            <p>&copy; 2025 YKS Men's Wear. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+

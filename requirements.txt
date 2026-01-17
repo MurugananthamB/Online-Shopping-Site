@@ -1,0 +1,16 @@
+django==5.2.1
+mysqlclient
+django-allauth
+djangorestframework
+djangorestframework-simplejwt
+requests
+cryptography==43.0.0
+PyJWT>=2.0.0
+whitenoise
+gunicorn
+Pillow
+twilio
+cloudinary
+django-cloudinary-storage
+python-dotenv
+razorpay
