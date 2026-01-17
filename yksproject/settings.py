@@ -35,7 +35,12 @@ SECRET_KEY = os.environ.get(
 DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-ALLOWED_HOSTS = ['yksshop.onrender.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = [
+    'online-shopping-site-ummr.onrender.com',
+    'yksshop.onrender.com',
+    'localhost',
+    '127.0.0.1',
+]
 
 
 STATIC_URL = '/static/'
