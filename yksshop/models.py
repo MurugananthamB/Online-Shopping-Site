@@ -209,8 +209,19 @@ class HomeHero(models.Model):
 
     @classmethod
     def get_solo(cls):
-        hero, _ = cls.objects.get_or_create(pk=1)
-        return hero
+        try:
+            hero, _ = cls.objects.get_or_create(pk=1)
+            return hero
+        except Exception:
+            # Return a default instance if table doesn't exist yet (migrations not run)
+            # This prevents 500 errors during initial deployment
+            return cls(
+                pk=1,
+                title="Premium Men's Wear Collection",
+                subtitle="Discover the latest styles and timeless classics",
+                primary_button_label="Shop the Collection",
+                primary_button_url="/shop/",
+            )
 
 
 class Order(models.Model):

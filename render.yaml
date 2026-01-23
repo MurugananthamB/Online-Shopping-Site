@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: yksshop
+    env: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn yksproject.wsgi:application"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.0
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        sync: false  # Set this in Render dashboard
+      # Add other environment variables in Render dashboard:
+      # - DATABASE_URL (if using PostgreSQL)
+      # - CLOUDINARY_CLOUD_NAME
+      # - CLOUDINARY_API_KEY
+      # - CLOUDINARY_API_SECRET
+      # - SENDGRID_API_KEY
+      # - RAZORPAY_KEY_ID
+      # - RAZORPAY_KEY_SECRET
+      # - EMAIL_HOST_USER
+      # - EMAIL_HOST_PASSWORD

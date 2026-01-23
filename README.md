@@ -222,6 +222,42 @@ source venv/Scripts/activate  # or venv\Scripts\activate on Windows
 python -m pip install -r requirements.txt
 ```
 
+## Deployment on Render
+
+### Quick Setup
+1. Push your code to GitHub
+2. Connect your repository to Render
+3. Render will automatically detect `render.yaml` and use the build script
+
+### Manual Configuration (if not using render.yaml)
+If you're configuring manually in the Render dashboard:
+
+**Build Command:**
+```bash
+./build.sh
+```
+
+Or if build.sh doesn't work, use:
+```bash
+pip install -r requirements.txt && python manage.py migrate --noinput && python manage.py collectstatic --noinput --clear
+```
+
+**Start Command:**
+```bash
+gunicorn yksproject.wsgi:application
+```
+
+### Important Notes
+- The `build.sh` script automatically runs migrations during deployment
+- Ensure all environment variables are set in the Render dashboard
+- The build script will fail if migrations have errors, preventing broken deployments
+
+### Troubleshooting
+If you see "no such table" errors:
+1. Check that the build command includes `python manage.py migrate`
+2. Verify migrations are in the `yksshop/migrations/` directory
+3. Check Render build logs to ensure migrations ran successfully
+
 ## Contributing
 Pull requests are welcome. For major changes, open an issue first to discuss the proposal.
 
